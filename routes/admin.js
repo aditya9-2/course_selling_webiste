@@ -19,18 +19,23 @@ adminRouter.post('/signin', (req, res) => {
 
 });
 
-// all courses purchases
-adminRouter.get('/purchases', (req, res) => {
+adminRouter.post("/course", function (req, res) {
     res.json({
-        message: "get all purchase endpoint"
-    });
-});
+        message: "signup endpoint"
+    })
+})
 
-adminRouter.get('/purchases', (req, res) => {
+adminRouter.put("/course", function (req, res) {
     res.json({
-        message: "get all purchase endpoint"
-    });
-});
+        message: "signup endpoint"
+    })
+})
+
+adminRouter.get("/course/bulk", function (req, res) {
+    res.json({
+        message: "signup endpoint"
+    })
+})
 
 module.exports = {
     adminRouter: adminRouter
