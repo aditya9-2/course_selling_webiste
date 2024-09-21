@@ -18,4 +18,4 @@ app.use('/api/v1/course', courseRouter);
 
 app.listen(port, () => {
     console.log(`listening`);
-})
+});
