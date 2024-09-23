@@ -16,24 +16,28 @@ adminRouter.post('/signup', async (req, res) => {
         password: z.string().min(3).max(30),
         firstName: z.string().min(3).max(100),
         lastName: z.string().min(3).max(100),
-
-
     });
 
     try {
-        const parseDataWithSucess = requiredBody.safeParse(req.body);
+        const parseDataWithSuccess = requiredBody.safeParse(req.body);
 
-        if (!parseDataWithSucess.success) {
+        if (!parseDataWithSuccess.success) {
             return res.status(400).json({
                 message: "Incorrect Format!!",
-                error: parseDataWithSucess.error,
+                error: parseDataWithSuccess.error,
             });
         }
 
-        const email = req.body.email;
-        const password = req.body.password;
-        const firstName = req.body.firstName;
-        const lastName = req.body.lastName;
+        const { email, password, firstName, lastName } = parseDataWithSuccess.data;
+
+        // Check if the user with the given email already exists
+        const existingUser = await adminModel.findOne({ email });
+
+        if (existingUser) {
+            return res.status(409).json({
+                message: "User already exists",
+            });
+        }
 
         const hashedPassword = await bcrypt.hash(password, 5);
 
@@ -41,33 +45,40 @@ adminRouter.post('/signup', async (req, res) => {
             email: email,
             password: hashedPassword,
             firstName: firstName,
-            lastName: lastName
+            lastName: lastName,
         });
 
         res.json({
-            sucess: "signed up sucessfull"
-        })
+            success: "Signed up successfully",
+        });
 
     } catch (err) {
-        res.json({
-            message: "User already exits"
-        })
+        return res.status(500).json({
+            message: "Something went wrong",
+            error: err.message,
+        });
     }
-
-
 });
 
 // signin
 adminRouter.post('/signin', async (req, res) => {
-    const { email, password } = req.body;
+    const signInSchema = z.object({
+        email: z.string().min(3).max(100).email(),
+        password: z.string().min(3).max(30),
+    });
 
-    if (!email || !password) {
-        res.status(401).json({
-            message: "Username or Password can't be empty",
+    const parseResult = signInSchema.safeParse(req.body);
+
+    if (!parseResult.success) {
+        return res.status(400).json({
+            message: "Invalid input format",
+            error: parseResult.error.errors,
         });
     }
 
     try {
+        const { email, password } = parseResult.data;
+
         const user = await adminModel.findOne({ email });
 
         if (!user) {
@@ -76,7 +87,7 @@ adminRouter.post('/signin', async (req, res) => {
             });
         }
 
-        bcrypt.compare(password, user.password, function (err, result) {
+        bcrypt.compare(password, user.password, (err, result) => {
             if (!result) {
                 res.status(401).json({
                     message: "Wrong Password",
