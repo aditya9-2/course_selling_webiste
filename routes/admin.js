@@ -114,44 +114,86 @@ adminRouter.post('/signin', async (req, res) => {
 });
 
 adminRouter.post("/course", async (req, res) => {
+
+    const courseSchema = z.object({
+        title: z.string().min(3, "Title must be at least 3 characters long").max(100, "Title can't exceed 100 characters"),
+        description: z.string().min(10, "Description must be at least 10 characters long"),
+        imageUrl: z.string().url("Invalid image URL"),
+        price: z.number().positive("Price must be a positive number"),
+    });
+
     const adminId = req.userId;
+    const parseResult = courseSchema.safeParse(req.body);
 
-    const { title, description, imageUrl, price } = req.body;
+    if (!parseResult.success) {
+        return res.status(400).json({
+            message: "Invalid input format",
+            error: parseResult.error.errors,
+        });
+    }
 
-    const course = await courseModel.create({
-        title: title,
-        description: description,
-        price: price,
-        imageUrl: imageUrl,
-        creatorId: adminId
-    })
+    const { title, description, imageUrl, price } = parseResult.data;
 
-    res.json({
-        message: "Course created",
-        courseId: course._id
-    })
-})
+    try {
+        const course = await courseModel.create({
+            title,
+            description,
+            price,
+            imageUrl,
+            creatorId: adminId
+        });
 
-adminRouter.put("/course", async function (req, res) {
+        res.json({
+            message: "Course created",
+            courseId: course._id
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: "Something went wrong",
+            error: error.message,
+        });
+    }
+});
+
+adminRouter.put("/course", async (req, res) => {
+
+    const updateCourseSchema = z.object({
+        courseId: z.string().min(1, "Course ID is required"),
+        title: z.string().min(3, "Title must be at least 3 characters long").max(100, "Title can't exceed 100 characters"),
+        description: z.string().min(10, "Description must be at least 10 characters long"),
+        imageUrl: z.string().url("Invalid image URL"),
+        price: z.number().positive("Price must be a positive number"),
+    });
+
     const adminId = req.userId;
+    const parseResult = updateCourseSchema.safeParse(req.body);
 
-    const { title, description, imageUrl, price, courseId } = req.body;
+    if (!parseResult.success) {
+        return res.status(400).json({
+            message: "Invalid input format",
+            error: parseResult.error.errors,
+        });
+    }
 
-    const course = await courseModel.updateOne({
-        _id: courseId,
-        creatorId: adminId
-    }, {
-        title: title,
-        description: description,
-        imageUrl: imageUrl,
-        price: price
-    })
+    const { title, description, imageUrl, price, courseId } = parseResult.data;
 
-    res.json({
-        message: "Course updated",
-        courseId: course._id
-    })
-})
+    try {
+        await courseModel.updateOne(
+            { _id: courseId, creatorId: adminId },
+            { title, description, imageUrl, price }
+        );
+
+        res.json({
+            message: "Course updated",
+            courseId: courseId
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: "Something went wrong",
+            error: error.message,
+        });
+    }
+});
 
 adminRouter.get("/bulk", async function (req, res) {
     const adminId = req.userId;
