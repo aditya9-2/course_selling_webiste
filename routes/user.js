@@ -26,7 +26,7 @@ userRouter.post('/signup', async (req, res) => {
             });
         }
 
-        const { email, password, firstName, lastName } = req.body;
+        const { email, password, firstName, lastName } = parseDataWithSuccess.data;
 
         // Check if the user with the given email already exists
         const existingUser = await userModel.findOne({ email });
@@ -61,15 +61,24 @@ userRouter.post('/signup', async (req, res) => {
 
 // signin
 userRouter.post('/signin', async (req, res) => {
-    const { email, password } = req.body;
 
-    if (!email || !password) {
-        res.status(401).json({
-            message: "Username or Password can't be empty",
+    const signInSchema = z.object({
+        email: z.string().min(3).max(100).email(),
+        password: z.string().min(3).max(30),
+    });
+
+    const parseResult = signInSchema.safeParse(req.body);
+
+    if (!parseResult.success) {
+        return res.status(400).json({
+            message: "Invalid input format",
+            error: parseResult.error.errors,
         });
     }
 
     try {
+        const { email, password } = parseResult.data;
+
         const user = await userModel.findOne({ email });
 
         if (!user) {
@@ -78,7 +87,7 @@ userRouter.post('/signin', async (req, res) => {
             });
         }
 
-        bcrypt.compare(password, user.password, function (err, result) {
+        bcrypt.compare(password, user.password, (err, result) => {
             if (!result) {
                 res.status(401).json({
                     message: "Wrong Password",
